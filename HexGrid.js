@@ -1,7 +1,7 @@
 export class HexGrid {
   constructor(
     hexGridDiameter = 40,
-    hexRingCount = 10,
+    hexRingCount = 5,
     width = 800,
     height = 800
   ) {
@@ -23,15 +23,42 @@ export class HexGrid {
     this.createCentralPoint();
     this.populateVertices();
     this.createFaces();
+    console.log(
+      "quads: ",
+      this.quads.length,
+      "vertices: ",
+      this.vertices.length
+    );
     this.mergeTrianglesToQuadsRandomly();
+    console.log(
+      "quads: ",
+      this.quads.length,
+      "vertices: ",
+      this.vertices.length
+    );
     this.subdivideMesh();
+    console.log(
+      "quads: ",
+      this.quads.length,
+      "vertices: ",
+      this.vertices.length,
+      "subdivVertices: ",
+      this.subdivVertices.length
+    );
+
     this.precalculateAdjacentFaces();
-    let averageFaceArea = this.calculateAverageArea();
     this.relaxVertices(100, 0.1);
   }
 
   createCentralPoint() {
-    const centralPoint = new Vertex(0, 0, 0, this.width, this.height);
+    const centralPoint = new Vertex(
+      0,
+      0,
+      0,
+      this.width,
+      this.height,
+      this.hexRingCount
+    );
     this.vertices.push(centralPoint);
   }
 
@@ -193,6 +220,8 @@ export class HexGrid {
   }
 
   precalculateAdjacentFaces() {
+    //put all subdivide vertices into vertices array
+    this.subdivVertices.forEach((v) => this.vertices.push(v));
     this.vertices.forEach((vertex) => {
       vertex.adjacentFaces = []; // Initialize the array to hold adjacent quads
     });
@@ -264,15 +293,6 @@ export class HexGrid {
     }
     return Math.abs(area / 2);
   }
-  calculateAverageArea() {
-    let totalArea = 0;
-    this.quads.forEach((face) => {
-      totalArea += this.calculateFaceArea(face);
-    });
-    return totalArea / this.quads.length;
-  }
-
-  // Additional methods (createFaces, mergeTrianglesToQuadsRandomly, etc.) adapted to use instance variables
 
   getQuads() {
     return this.quads;
@@ -282,12 +302,21 @@ export class HexGrid {
 }
 
 class Vertex {
-  constructor(i, j, k, width = 800, height = 800) {
+  constructor(
+    i,
+    j,
+    k,
+    width = 800,
+    height = 800,
+    hexRingCount,
+    hexGridDiameter
+  ) {
     this.i = i;
     this.j = j;
     this.k = k;
     this.index = i + j + k === 0 ? 0 : 1 + (i * 6 * (i - 1)) / 2 + j * i + k;
     this.edgy = i === hexRingCount;
+    this.hexGridDiameter = hexGridDiameter;
     this.calculatePosition(width, height);
   }
 
@@ -295,16 +324,20 @@ class Vertex {
     // Convert p5.js specific functions to generic JavaScript
     const angleStep = Math.PI / 3;
     this.p1 = {
-      x: width / 2 + this.i * hexGridDiameter * Math.cos(this.j * angleStep),
-      y: height / 2 + this.i * hexGridDiameter * Math.sin(this.j * angleStep),
+      x:
+        width / 2 +
+        this.i * this.hexGridDiameter * Math.cos(this.j * angleStep),
+      y:
+        height / 2 +
+        this.i * this.hexGridDiameter * Math.sin(this.j * angleStep),
     };
     this.p2 = {
       x:
         width / 2 +
-        this.i * hexGridDiameter * Math.cos((this.j + 1) * angleStep),
+        this.i * this.hexGridDiameter * Math.cos((this.j + 1) * angleStep),
       y:
         height / 2 +
-        this.i * hexGridDiameter * Math.sin((this.j + 1) * angleStep),
+        this.i * this.hexGridDiameter * Math.sin((this.j + 1) * angleStep),
     };
     if (this.i === 0) {
       this.x = this.p1.x;
